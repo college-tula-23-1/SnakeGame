@@ -9,8 +9,5 @@ int main()
 
     SnakeGame game{ &console, &gameWin };
 
-    gameWin.Show();
-    game.DrawSnake();
-
-    std::cin.get();
+    game.Run();
 }
