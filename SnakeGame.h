@@ -36,6 +36,7 @@ public:
     SnakeGame(Console* console, WindowConsole* winCons) :
         console{ console }, winCons{ winCons }, gameOver{ false }, score{ 0 }
     {
+        srand(time(NULL));
         int centerX = winCons->Column() + winCons->Width() / 2;
         int centerY = winCons->Row() + winCons->Height() / 2;
 
@@ -45,6 +46,9 @@ public:
 
         currentDirection = Direction::Right;
         nextDirection = Direction::Right;
+
+        GenerateFood();
+        winCons->Show();
     }
 
     void Move()
@@ -63,24 +67,46 @@ public:
         snake.pop_back();
     }
 
+    bool CheckCollision()
+    {
+        Point head = snake.front();
+
+        if (head.x <= winCons->Column() ||  head.x >= winCons->Column() + winCons->Width() - 1 ||
+            head.y <= winCons->Row() || head.y >= winCons->Row() + winCons->Height() - 1)
+        {
+            return true;
+        }
+
+        for (int i{ 1 }; i < snake.size(); ++i)
+            if (head == snake[i])
+                return true;
+
+        return false;
+    }
+
     void GenerateFood()
     {
         int positions = winCons->Width() * winCons->Height();
         int attempt = 0;
+        bool validPosition = false;
 
-        while (attempt < positions)
+        while (!validPosition && attempt < positions)
         {
             attempt++;
             Point p{
                 winCons->Column() + 1 + rand() % (winCons->Width() - 2),
                 winCons->Row() + 1 + rand() % (winCons->Height() - 2)
             };
+            food.x = p.x;
+            food.y = p.y;
+            validPosition = true;
 
             for (Point segment : snake)
             {
                 if (segment == p)
                 {
-
+                    validPosition = false;
+                    break;
                 }
             }
         }
@@ -91,10 +117,26 @@ public:
         winCons->WriteGoto(food.y, food.x, '$');
     }
 
+
+
     void DrawSnake()
     {
-        system("cls");
         winCons->Show();
+        for (int y = winCons->Row() + 1; y < winCons->Row() + winCons->Height() - 1; ++y)
+        {
+            for (int x = winCons->Column() + 1; x < winCons->Column() + winCons->Width() - 1; ++x)
+            {
+                bool isSegment = false;
+                for (Point segment : snake)
+                    if (segment.x == x && segment.y == y)
+                    {
+                        isSegment = true;
+                        break;
+                    }
+                if (!isSegment && !(food.x == x && food.y == y))
+                    winCons->WriteGoto(y, x, ' ');
+            }
+        }
 
         for (const Point& segment : snake)
             winCons->WriteGoto(segment.y, segment.x, 'O');
@@ -147,7 +189,17 @@ public:
 
         Input();
         Move();
-
+        if (CheckCollision())
+        {
+            gameOver = true;
+        }
+        if (snake.front() == food)
+        {
+            GenerateFood();
+            Point backSegment = snake.back();
+            snake.push_back(backSegment);
+            score++;
+        }
         DrawSnake();
         DrawFood();
     }
@@ -158,7 +210,12 @@ public:
         while (!gameOver)
         {
             Update();
-            Sleep(200);
+            Sleep(100);
         }
+
+        winCons->WriteGoto(winCons->Row() + winCons->Height() / 2,
+            winCons->Column() + winCons->Width() / 2 - 12,
+            "GameOver! Your score is: " + std::to_string(score));
+        std::cin.get();
     }
 };
